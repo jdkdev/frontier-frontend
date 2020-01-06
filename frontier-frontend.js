@@ -52,13 +52,15 @@ export const ajax = async function(url = '', data, opts) {
     // params: method === 'GET' ? JSON.stringify(data) : '{}'
 
         let res = await fetchData(url, opts)
+    //TODO:  respond to 401,500, let 200 through
         if (['denied','unauthorized'].includes(res.error)) return logout('/')
         else return res
 }
 
-let get = function(url) {
+const get = function(url) {
     return ajax(url)
 }
+
 const post = function(url, data) {
     if (! data) return alert('Save Function must submit data')
 
@@ -66,6 +68,7 @@ const post = function(url, data) {
         method: 'POST'
     })
 }
+
 /**
  * Alias for post function
  */
@@ -78,11 +81,13 @@ const destroy = function(url) {
         method: 'DELETE'
     })
 }
+
 const patch = function(url) {
     return ajax(url, null, {
         method: 'PATCH'
     })
 }
+
 const restore = function(url) {
     return ajax(url + '/restore', null, {
         method: 'PATCH'
@@ -108,13 +113,11 @@ export const ajx = {
  *  */ 
 let authenticated = derived(currentUser, ($currentUser) => {
     //What is the best way to test for user logged in
-    console.log('currentUSer', currentUser)
-    console.log('currentUSer', $currentUser)
-    return 'hrllo'
+    return 'not ready'
 })
 let login = async function({email, password}, destination = '/', cb) {
     try {
-        const data = await post(env.authUrl + 'login', {email, password})
+        const data = await post(env.authUrl, {email, password})
         apiToken.set(data.accessToken)
 
         localStorage.setItem('access', data.accessToken)
@@ -127,6 +130,7 @@ let login = async function({email, password}, destination = '/', cb) {
         console.error(e);
     }
 }
+
 let logout = function(destination = '/', cb) {
     ['access', 'refresh', 'currentUser'].map(i => localStorage.removeItem(i))
     authorization = false
@@ -147,4 +151,3 @@ export let auth = writable( {
     logout,
     user,
 })
-//export let auth = writable(...authx)
