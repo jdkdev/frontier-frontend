@@ -6,7 +6,7 @@ import env from '../../.env.js'
 import { writable, derived } from 'svelte/store';
 
 let apiToken = writable(localStorage.getItem('access') || false, () => () => console.log('logout broken'))
-export let currentUser = writable(JSON.parse(localStorage.getItem('currentUser')) || false)
+export let currentUser = writable(JSON.parse(localStorage.getItem('currentUser') || false))
 
 let authorization
 const tokenUnsubcribe = apiToken.subscribe(value => authorization = value)
