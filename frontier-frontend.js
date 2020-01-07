@@ -6,7 +6,10 @@ import env from '../../.env.js'
 import { writable, derived } from 'svelte/store';
 
 let apiToken = writable(localStorage.getItem('access') || false, () => () => console.log('logout broken'))
-export let currentUser = writable(JSON.parse(localStorage.getItem('currentUser') || false))
+let userStorage = localStorage.getItem('currentUser') || false
+userStorage = JSON.parse(userStorage) || false
+
+export let currentUser = writable(userStorage)
 
 let authorization
 const tokenUnsubcribe = apiToken.subscribe(value => authorization = value)
@@ -32,8 +35,18 @@ let fetchData = async function(url, options) {
 
     options = options ? {...options, ...defaultOpts} : defaultOpts
     // console.log({options})
+
+    console.log('fetchData')
     let res = await fetch(fetchUrl, options)
-    return res.ok ? await res.json() : console.log({res})
+    console.log('fetched')
+
+    if ([401,403,500].includes(res.status)) {
+        logout()
+        return false
+    }
+
+    else return await res.json()
+    
 }
 
 /**
@@ -51,10 +64,12 @@ export const ajax = async function(url = '', data, opts) {
     // not sure if I will need to do this
     // params: method === 'GET' ? JSON.stringify(data) : '{}'
 
-        let res = await fetchData(url, opts)
-    //TODO:  respond to 401,500, let 200 through
-        if (['denied','unauthorized'].includes(res.error)) return logout('/')
-        else return res
+    console.log('ajax')
+    let res = await fetchData(url, opts)
+    //console.log({res})
+
+    if ([401,403,500].includes(res.status)) return logout('/')
+    else return res
 }
 
 const get = function(url) {
@@ -62,6 +77,8 @@ const get = function(url) {
 }
 
 const post = function(url, data) {
+
+        console.log('post')
     if (! data) return alert('Save Function must submit data')
 
     return ajax(url, data, {
@@ -117,15 +134,24 @@ let authenticated = derived(currentUser, ($currentUser) => {
 })
 let login = async function({email, password}, destination = '/', cb) {
     try {
-        const data = await post(env.authUrl, {email, password})
-        apiToken.set(data.accessToken)
 
-        localStorage.setItem('access', data.accessToken)
-        localStorage.setItem('refresh', data.refreshToken)
-        localStorage.setItem('currentUser', JSON.stringify(data.user))
+        console.log('begin')
+        let { accessToken = false, refreshToken = false, user = false} = await post(env.authUrl, {email, password})
+        console.log('returned')
+
+        apiToken.set(accessToken)
+
+        localStorage.setItem('access', accessToken)
+        localStorage.setItem('refresh', refreshToken)
+
+        currentUser.set(user)
+        user = JSON.stringify(user) || false
+        localStorage.setItem('currentUser', user)
         
-        currentUser.set(data.user)
-        return cb ? cb(destination) : document.location = destination
+
+        console.log('done')
+        if(accessToken) return cb ? cb(destination) : document.location = destination
+
     } catch (e) {
         console.error(e);
     }
